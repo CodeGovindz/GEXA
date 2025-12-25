@@ -37,16 +37,15 @@ class EmbeddingService:
         Returns:
             Embedding vector as list of floats
         """
-        # Run in thread pool since genai is synchronous
-        loop = asyncio.get_event_loop()
-        result = await loop.run_in_executor(
-            None,
-            lambda: genai.embed_content(
+        # Use asyncio.to_thread for better Windows compatibility
+        def _embed():
+            return genai.embed_content(
                 model=self.model,
                 content=text,
                 task_type="retrieval_document",
             )
-        )
+        
+        result = await asyncio.to_thread(_embed)
         return result["embedding"]
     
     @retry(
@@ -62,15 +61,14 @@ class EmbeddingService:
         Returns:
             Embedding vector as list of floats
         """
-        loop = asyncio.get_event_loop()
-        result = await loop.run_in_executor(
-            None,
-            lambda: genai.embed_content(
+        def _embed():
+            return genai.embed_content(
                 model=self.model,
                 content=query,
                 task_type="retrieval_query",
             )
-        )
+        
+        result = await asyncio.to_thread(_embed)
         return result["embedding"]
     
     async def embed_texts(self, texts: List[str]) -> List[List[float]]:

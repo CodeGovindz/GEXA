@@ -171,6 +171,9 @@ class SearchService:
                         # Save to database
                         page = await self._save_page(url, content)
                         
+                        # Index the page (generate embeddings)
+                        await self._index_page(page)
+                        
                         result = {
                             "url": url,
                             "title": content.title if content else None,
