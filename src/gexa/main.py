@@ -12,7 +12,7 @@ from fastapi.responses import JSONResponse
 from gexa import __version__
 from gexa.config import settings
 from gexa.database.schemas import HealthResponse, ErrorResponse
-from gexa.api.routes import search, contents, crawl, findsimilar, answer, keys
+from gexa.api.routes import search, contents, crawl, findsimilar, answer, keys, research
 
 
 @asynccontextmanager
@@ -79,7 +79,17 @@ app.include_router(contents.router, prefix="/contents", tags=["Contents"])
 app.include_router(crawl.router, prefix="/crawl", tags=["Crawl"])
 app.include_router(findsimilar.router, prefix="/findsimilar", tags=["Find Similar"])
 app.include_router(answer.router, prefix="/answer", tags=["Answer"])
+app.include_router(research.router, prefix="/research", tags=["Research"])
 app.include_router(keys.router, prefix="/keys", tags=["API Keys"])
+
+
+# Serve dashboard static files
+from fastapi.staticfiles import StaticFiles
+import os
+
+dashboard_path = os.path.join(os.path.dirname(__file__), "..", "..", "dashboard")
+if os.path.exists(dashboard_path):
+    app.mount("/dashboard", StaticFiles(directory=dashboard_path, html=True), name="dashboard")
 
 
 if __name__ == "__main__":

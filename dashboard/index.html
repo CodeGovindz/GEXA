@@ -1,0 +1,355 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GEXA Dashboard - Web Search API</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="app">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="logo">
+                <span class="logo-icon">🔍</span>
+                <span class="logo-text">GEXA</span>
+            </div>
+            
+            <nav class="nav">
+                <a href="#" class="nav-item active" data-page="playground">
+                    <span class="nav-icon">⚡</span>
+                    <span>Playground</span>
+                </a>
+                <a href="#" class="nav-item" data-page="keys">
+                    <span class="nav-icon">🔑</span>
+                    <span>API Keys</span>
+                </a>
+                <a href="#" class="nav-item" data-page="usage">
+                    <span class="nav-icon">📊</span>
+                    <span>Usage</span>
+                </a>
+                <a href="#" class="nav-item" data-page="docs">
+                    <span class="nav-icon">📚</span>
+                    <span>API Docs</span>
+                </a>
+            </nav>
+            
+            <div class="sidebar-footer">
+                <div class="api-status">
+                    <span class="status-dot"></span>
+                    <span id="apiStatus">Connecting...</span>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main">
+            <!-- Playground Page -->
+            <div id="playgroundPage" class="page active">
+                <header class="page-header">
+                    <h1>API Playground</h1>
+                    <p>Test GEXA endpoints in real-time</p>
+                </header>
+
+                <div class="playground-container">
+                    <!-- Endpoint Selector -->
+                    <div class="endpoint-selector">
+                        <button class="endpoint-btn active" data-endpoint="search">
+                            🔍 Search
+                        </button>
+                        <button class="endpoint-btn" data-endpoint="contents">
+                            📄 Contents
+                        </button>
+                        <button class="endpoint-btn" data-endpoint="answer">
+                            💬 Answer
+                        </button>
+                        <button class="endpoint-btn" data-endpoint="research">
+                            🔬 Research
+                        </button>
+                        <button class="endpoint-btn" data-endpoint="similar">
+                            🔗 Similar
+                        </button>
+                    </div>
+
+                    <!-- API Key Input -->
+                    <div class="api-key-section">
+                        <label>API Key</label>
+                        <div class="api-key-input">
+                            <input type="password" id="apiKeyInput" placeholder="Enter your API key (gx_...)">
+                            <button id="toggleKeyVisibility" class="icon-btn">👁️</button>
+                        </div>
+                    </div>
+
+                    <!-- Request Form -->
+                    <div class="request-form">
+                        <!-- Search Form -->
+                        <div id="searchForm" class="form-section active">
+                            <div class="form-group">
+                                <label>Search Query</label>
+                                <input type="text" id="searchQuery" placeholder="e.g., latest AI research papers">
+                            </div>
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label>Results</label>
+                                    <input type="number" id="searchNumResults" value="10" min="1" max="100">
+                                </div>
+                                <div class="form-group">
+                                    <label>
+                                        <input type="checkbox" id="searchIncludeContent"> Include Content
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Contents Form -->
+                        <div id="contentsForm" class="form-section">
+                            <div class="form-group">
+                                <label>URLs (one per line)</label>
+                                <textarea id="contentsUrls" rows="3" placeholder="https://example.com&#10;https://another-site.com"></textarea>
+                            </div>
+                            <div class="form-group">
+                                <label>
+                                    <input type="checkbox" id="contentsIncludeMarkdown" checked> Include Markdown
+                                </label>
+                            </div>
+                        </div>
+
+                        <!-- Answer Form -->
+                        <div id="answerForm" class="form-section">
+                            <div class="form-group">
+                                <label>Question</label>
+                                <input type="text" id="answerQuery" placeholder="e.g., What is transformer architecture?">
+                            </div>
+                            <div class="form-group">
+                                <label>Number of Sources</label>
+                                <input type="number" id="answerNumSources" value="5" min="1" max="20">
+                            </div>
+                        </div>
+
+                        <!-- Research Form -->
+                        <div id="researchForm" class="form-section">
+                            <div class="form-group">
+                                <label>Research Topic</label>
+                                <input type="text" id="researchTopic" placeholder="e.g., Impact of AI on healthcare">
+                            </div>
+                            <div class="form-group">
+                                <label>Additional Instructions (optional)</label>
+                                <textarea id="researchInstructions" rows="2" placeholder="Focus on recent developments..."></textarea>
+                            </div>
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label>Depth</label>
+                                    <select id="researchDepth">
+                                        <option value="quick">Quick (3-5 sources)</option>
+                                        <option value="standard" selected>Standard (8-12 sources)</option>
+                                        <option value="deep">Deep (15-25 sources)</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label>Format</label>
+                                    <select id="researchFormat">
+                                        <option value="report">Report</option>
+                                        <option value="bullets">Bullet Points</option>
+                                        <option value="structured">Structured</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Similar Form -->
+                        <div id="similarForm" class="form-section">
+                            <div class="form-group">
+                                <label>URL to Find Similar Pages</label>
+                                <input type="text" id="similarUrl" placeholder="https://example.com/article">
+                            </div>
+                            <div class="form-group">
+                                <label>Number of Results</label>
+                                <input type="number" id="similarNumResults" value="10" min="1" max="50">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Execute Button -->
+                    <button id="executeBtn" class="execute-btn">
+                        <span class="btn-text">Execute Request</span>
+                        <span class="btn-loader" style="display: none;">⏳</span>
+                    </button>
+
+                    <!-- Response Section -->
+                    <div class="response-section">
+                        <div class="response-header">
+                            <h3>Response</h3>
+                            <span id="responseTime" class="response-time"></span>
+                        </div>
+                        <pre id="responseOutput" class="response-output">Response will appear here...</pre>
+                    </div>
+                </div>
+            </div>
+
+            <!-- API Keys Page -->
+            <div id="keysPage" class="page">
+                <header class="page-header">
+                    <h1>API Keys</h1>
+                    <p>Manage your API keys</p>
+                </header>
+
+                <div class="keys-container">
+                    <div class="create-key-section">
+                        <h3>Create New Key</h3>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>Key Name</label>
+                                <input type="text" id="newKeyName" placeholder="e.g., Production Key">
+                            </div>
+                            <div class="form-group">
+                                <label>Quota</label>
+                                <input type="number" id="newKeyQuota" value="10000" min="100">
+                            </div>
+                            <button id="createKeyBtn" class="create-key-btn">Create Key</button>
+                        </div>
+                    </div>
+
+                    <div class="keys-list-section">
+                        <h3>Your API Keys</h3>
+                        <div id="keysList" class="keys-list">
+                            <p class="loading-text">Loading keys...</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Usage Page -->
+            <div id="usagePage" class="page">
+                <header class="page-header">
+                    <h1>Usage Analytics</h1>
+                    <p>Monitor your API usage</p>
+                </header>
+
+                <div class="usage-container">
+                    <div class="stats-grid">
+                        <div class="stat-card">
+                            <div class="stat-icon">📊</div>
+                            <div class="stat-content">
+                                <span class="stat-value" id="totalRequests">-</span>
+                                <span class="stat-label">Total Requests</span>
+                            </div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-icon">🔍</div>
+                            <div class="stat-content">
+                                <span class="stat-value" id="searchRequests">-</span>
+                                <span class="stat-label">Searches</span>
+                            </div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-icon">📄</div>
+                            <div class="stat-content">
+                                <span class="stat-value" id="pagesIndexed">-</span>
+                                <span class="stat-label">Pages Indexed</span>
+                            </div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-icon">⚡</div>
+                            <div class="stat-content">
+                                <span class="stat-value" id="avgLatency">-</span>
+                                <span class="stat-label">Avg Latency</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="usage-note">
+                        <p>📈 Detailed analytics coming soon!</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Docs Page -->
+            <div id="docsPage" class="page">
+                <header class="page-header">
+                    <h1>API Documentation</h1>
+                    <p>Learn how to use the GEXA API</p>
+                </header>
+
+                <div class="docs-container">
+                    <div class="docs-section">
+                        <h3>Quick Start</h3>
+                        <pre class="code-block">
+<code># Install the SDK
+pip install gexa-py
+
+# Use in your code
+from gexa_py import Gexa
+
+gexa = Gexa("your-api-key", base_url="http://localhost:8000")
+
+# Search the web
+results = gexa.search("AI research papers")
+
+# Get content from URLs
+contents = gexa.get_contents(["https://example.com"])
+
+# Get AI-powered answer
+answer = gexa.answer("What is machine learning?")</code></pre>
+                    </div>
+
+                    <div class="docs-section">
+                        <h3>API Endpoints</h3>
+                        <table class="endpoints-table">
+                            <thead>
+                                <tr>
+                                    <th>Endpoint</th>
+                                    <th>Method</th>
+                                    <th>Description</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><code>/search</code></td>
+                                    <td>POST</td>
+                                    <td>Semantic web search</td>
+                                </tr>
+                                <tr>
+                                    <td><code>/contents</code></td>
+                                    <td>POST</td>
+                                    <td>Extract content from URLs</td>
+                                </tr>
+                                <tr>
+                                    <td><code>/answer</code></td>
+                                    <td>POST</td>
+                                    <td>AI-generated answer with citations</td>
+                                </tr>
+                                <tr>
+                                    <td><code>/research</code></td>
+                                    <td>POST</td>
+                                    <td>In-depth research automation</td>
+                                </tr>
+                                <tr>
+                                    <td><code>/findsimilar</code></td>
+                                    <td>POST</td>
+                                    <td>Find similar pages</td>
+                                </tr>
+                                <tr>
+                                    <td><code>/crawl</code></td>
+                                    <td>POST</td>
+                                    <td>Start website crawl</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <div class="docs-section">
+                        <a href="/docs" target="_blank" class="docs-link">
+                            📖 View Full API Documentation (Swagger)
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
