@@ -76,7 +76,10 @@ class VectorStore:
         """
         # Build the base query with cosine similarity
         # pgvector uses <=> for cosine distance (1 - similarity)
-        query = """
+        # Format embedding as a vector literal for pgvector
+        embedding_str = "[" + ",".join(str(x) for x in query_embedding) + "]"
+        
+        query = f"""
             SELECT 
                 pc.id as chunk_id,
                 pc.content as chunk_content,
@@ -88,13 +91,13 @@ class VectorStore:
                 wp.author,
                 wp.published_date,
                 wp.content as page_content,
-                1 - (pc.embedding <=> :query_embedding::vector) as score
+                1 - (pc.embedding <=> '{embedding_str}'::vector) as score
             FROM page_chunks pc
             JOIN web_pages wp ON pc.page_id = wp.id
             WHERE pc.embedding IS NOT NULL
         """
         
-        params = {"query_embedding": str(query_embedding)}
+        params = {}
         
         # Apply filters
         if filters:
@@ -183,8 +186,11 @@ class VectorStore:
         
         chunk, page = row
         
+        # Format embedding as a vector literal for pgvector
+        embedding_str = "[" + ",".join(str(x) for x in chunk.embedding) + "]"
+        
         # Build query excluding the source page
-        query = """
+        query = f"""
             SELECT 
                 pc.id as chunk_id,
                 wp.id as page_id,
@@ -194,7 +200,7 @@ class VectorStore:
                 wp.author,
                 wp.published_date,
                 wp.content,
-                1 - (pc.embedding <=> :query_embedding::vector) as score
+                1 - (pc.embedding <=> '{embedding_str}'::vector) as score
             FROM page_chunks pc
             JOIN web_pages wp ON pc.page_id = wp.id
             WHERE pc.embedding IS NOT NULL
@@ -202,7 +208,6 @@ class VectorStore:
         """
         
         params = {
-            "query_embedding": str(list(chunk.embedding)),
             "source_page_id": page_id,
         }
         
