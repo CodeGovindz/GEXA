@@ -64,10 +64,10 @@ async def create_api_key(
 async def list_api_keys(
     db: AsyncSession = Depends(get_async_db),
 ):
-    """List all API keys (without the actual key values)."""
+    """List all active API keys (without the actual key values)."""
     try:
         result = await db.execute(
-            select(ApiKey).order_by(ApiKey.created_at.desc())
+            select(ApiKey).where(ApiKey.is_active == True).order_by(ApiKey.created_at.desc())
         )
         keys = result.scalars().all()
         
@@ -95,7 +95,7 @@ async def delete_api_key(
     key_id: str,
     db: AsyncSession = Depends(get_async_db),
 ):
-    """Deactivate an API key."""
+    """Delete an API key."""
     try:
         result = await db.execute(
             select(ApiKey).where(ApiKey.id == key_id)
@@ -105,10 +105,11 @@ async def delete_api_key(
         if not api_key:
             raise HTTPException(status_code=404, detail="API key not found")
         
-        api_key.is_active = False
+        # Actually delete the key from the database
+        await db.delete(api_key)
         await db.commit()
         
-        return {"message": "API key deactivated"}
+        return {"message": "API key deleted"}
         
     except HTTPException:
         raise

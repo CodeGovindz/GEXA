@@ -23,12 +23,75 @@ document.addEventListener('DOMContentLoaded', () => {
     initExecuteButton();
     initKeyManagement();
     checkApiStatus();
+    createKeyModal();
 
     // Load saved API key
     if (apiKey) {
         apiKeyInput.value = apiKey;
     }
 });
+
+// Create the API key modal
+function createKeyModal() {
+    const modal = document.createElement('div');
+    modal.id = 'keyModal';
+    modal.className = 'modal';
+    modal.innerHTML = `
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>🔑 API Key Created!</h3>
+            </div>
+            <div class="modal-body">
+                <p>Your new API key has been created. Copy it now - it won't be shown again!</p>
+                <div class="key-display">
+                    <input type="text" id="newKeyDisplay" readonly>
+                    <button id="copyKeyBtn" class="copy-btn">📋 Copy</button>
+                </div>
+                <p class="copy-status" id="copyStatus"></p>
+            </div>
+            <div class="modal-footer">
+                <button id="closeModalBtn" class="close-modal-btn">Close</button>
+            </div>
+        </div>
+    `;
+    document.body.appendChild(modal);
+
+    // Close modal
+    document.getElementById('closeModalBtn').addEventListener('click', () => {
+        modal.style.display = 'none';
+    });
+
+    // Copy key
+    document.getElementById('copyKeyBtn').addEventListener('click', async () => {
+        const keyDisplay = document.getElementById('newKeyDisplay');
+        try {
+            await navigator.clipboard.writeText(keyDisplay.value);
+            document.getElementById('copyStatus').textContent = '✅ Copied to clipboard!';
+            document.getElementById('copyStatus').style.color = '#22c55e';
+        } catch (err) {
+            // Fallback for older browsers
+            keyDisplay.select();
+            document.execCommand('copy');
+            document.getElementById('copyStatus').textContent = '✅ Copied to clipboard!';
+            document.getElementById('copyStatus').style.color = '#22c55e';
+        }
+    });
+
+    // Close on outside click
+    modal.addEventListener('click', (e) => {
+        if (e.target === modal) {
+            modal.style.display = 'none';
+        }
+    });
+}
+
+// Show the key modal
+function showKeyModal(key) {
+    const modal = document.getElementById('keyModal');
+    document.getElementById('newKeyDisplay').value = key;
+    document.getElementById('copyStatus').textContent = '';
+    modal.style.display = 'flex';
+}
 
 // Navigation
 function initNavigation() {
@@ -240,18 +303,30 @@ async function loadApiKeys() {
             return;
         }
 
-        keysList.innerHTML = keys.map(key => `
-            <div class="key-item">
+        keysList.innerHTML = '';
+        keys.forEach(key => {
+            const keyItem = document.createElement('div');
+            keyItem.className = 'key-item';
+            keyItem.innerHTML = `
                 <div class="key-info">
                     <h4>${key.name}</h4>
                     <p>Prefix: <code>${key.key_prefix}...</code> | Created: ${new Date(key.created_at).toLocaleDateString()}</p>
                 </div>
                 <div class="key-meta">
                     <span class="key-quota">${key.quota_used} / ${key.quota_total} used</span>
-                    <button class="delete-key-btn" onclick="deleteKey('${key.id}')">Delete</button>
+                    <button class="delete-key-btn" data-key-id="${key.id}">Delete</button>
                 </div>
-            </div>
-        `).join('');
+            `;
+            keysList.appendChild(keyItem);
+        });
+
+        // Add event listeners to delete buttons
+        document.querySelectorAll('.delete-key-btn').forEach(btn => {
+            btn.addEventListener('click', async (e) => {
+                const keyId = e.target.dataset.keyId;
+                await deleteKey(keyId);
+            });
+        });
 
     } catch (error) {
         keysList.innerHTML = `<p class="loading-text">Error loading keys: ${error.message}</p>`;
@@ -276,8 +351,8 @@ async function createApiKey() {
 
         const data = await response.json();
 
-        // Show the new key
-        alert(`API Key Created!\n\nKey: ${data.key}\n\n⚠️ Copy this key now - it won't be shown again!`);
+        // Show the new key in modal with copy option
+        showKeyModal(data.key);
 
         // Clear form
         document.getElementById('newKeyName').value = '';
@@ -296,7 +371,10 @@ async function deleteKey(keyId) {
     }
 
     try {
-        await fetch(`${API_BASE}/keys/${keyId}`, { method: 'DELETE' });
+        const response = await fetch(`${API_BASE}/keys/${keyId}`, { method: 'DELETE' });
+        if (!response.ok) {
+            throw new Error('Failed to delete key');
+        }
         loadApiKeys();
     } catch (error) {
         alert(`Error deleting key: ${error.message}`);
