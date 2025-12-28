@@ -39,6 +39,7 @@ class ApiKey(Base):
     key_prefix: Mapped[str] = mapped_column(String(8), nullable=False)  # For identification
     name: Mapped[str] = mapped_column(String(255), nullable=False)
     owner_email: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+    user_id: Mapped[Optional[str]] = mapped_column(String(255), nullable=True, index=True)  # Supabase user ID
     
     # Quota and rate limiting
     quota_total: Mapped[int] = mapped_column(Integer, default=10000)

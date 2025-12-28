@@ -7,6 +7,8 @@ const API_BASE = 'http://localhost:8000';
 // State
 let currentEndpoint = 'search';
 let apiKey = localStorage.getItem('gexa_api_key') || '';
+let accessToken = localStorage.getItem('gexa_access_token') || '';
+let userEmail = localStorage.getItem('gexa_user_email') || '';
 
 // DOM Elements
 const apiKeyInput = document.getElementById('apiKeyInput');
@@ -17,6 +19,13 @@ const apiStatus = document.getElementById('apiStatus');
 
 // Initialize
 document.addEventListener('DOMContentLoaded', () => {
+    // Check if user is logged in
+    if (!accessToken) {
+        // Redirect to login page
+        window.location.href = '/dashboard/login.html';
+        return;
+    }
+
     initNavigation();
     initEndpointSelector();
     initApiKeyInput();
@@ -24,12 +33,45 @@ document.addEventListener('DOMContentLoaded', () => {
     initKeyManagement();
     checkApiStatus();
     createKeyModal();
+    initUserMenu();
 
     // Load saved API key
     if (apiKey) {
         apiKeyInput.value = apiKey;
     }
 });
+
+// Initialize user menu
+function initUserMenu() {
+    const userMenu = document.getElementById('userMenu');
+    const userAvatar = document.getElementById('userAvatar');
+    const userEmailEl = document.getElementById('userEmail');
+
+    if (userEmail && userMenu) {
+        userMenu.style.display = 'block';
+        userEmailEl.textContent = userEmail;
+        userAvatar.textContent = userEmail.charAt(0).toUpperCase();
+    }
+}
+
+// Logout handler
+async function handleLogout() {
+    try {
+        await fetch(`${API_BASE}/auth/logout`, { method: 'POST' });
+    } catch (error) {
+        console.error('Logout error:', error);
+    }
+
+    // Clear all auth data
+    localStorage.removeItem('gexa_access_token');
+    localStorage.removeItem('gexa_refresh_token');
+    localStorage.removeItem('gexa_user_email');
+    localStorage.removeItem('gexa_user_id');
+    localStorage.removeItem('gexa_api_key');
+
+    // Redirect to login
+    window.location.href = '/dashboard/login.html';
+}
 
 // Create the API key modal
 function createKeyModal() {

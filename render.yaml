@@ -1,0 +1,39 @@
+# Render Blueprint for GEXA
+# https://render.com/docs/blueprint-spec
+
+services:
+  - type: web
+    name: gexa-api
+    runtime: python
+    region: singapore
+    plan: free
+    buildCommand: |
+      pip install -e ".[dev]"
+      playwright install chromium
+      playwright install-deps chromium
+    startCommand: uvicorn gexa.main:app --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: PYTHONPATH
+        value: src
+      - key: DATABASE_URL
+        sync: false
+      - key: DATABASE_ASYNC_URL
+        sync: false
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_ANON_KEY
+        sync: false
+      - key: SUPABASE_SERVICE_ROLE_KEY
+        sync: false
+      - key: SECRET_KEY
+        generateValue: true
+      - key: API_DEBUG
+        value: "false"
+      - key: CRAWLER_MAX_CONCURRENT
+        value: "3"
+      - key: CRAWLER_TIMEOUT
+        value: "30"
+    healthCheckPath: /health
+    autoDeploy: true

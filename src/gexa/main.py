@@ -12,7 +12,7 @@ from fastapi.responses import JSONResponse
 from gexa import __version__
 from gexa.config import settings
 from gexa.database.schemas import HealthResponse, ErrorResponse
-from gexa.api.routes import search, contents, crawl, findsimilar, answer, keys, research
+from gexa.api.routes import search, contents, crawl, findsimilar, answer, keys, research, auth
 
 
 @asynccontextmanager
@@ -81,6 +81,7 @@ app.include_router(findsimilar.router, prefix="/findsimilar", tags=["Find Simila
 app.include_router(answer.router, prefix="/answer", tags=["Answer"])
 app.include_router(research.router, prefix="/research", tags=["Research"])
 app.include_router(keys.router, prefix="/keys", tags=["API Keys"])
+app.include_router(auth.router, prefix="/auth", tags=["Authentication"])
 
 
 # Serve dashboard static files

@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -9,6 +10,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="styles.css">
 </head>
+
 <body>
     <div class="app">
         <!-- Sidebar -->
@@ -17,7 +19,7 @@
                 <span class="logo-icon">🔍</span>
                 <span class="logo-text">GEXA</span>
             </div>
-            
+
             <nav class="nav">
                 <a href="#" class="nav-item active" data-page="playground">
                     <span class="nav-icon">⚡</span>
@@ -36,11 +38,18 @@
                     <span>API Docs</span>
                 </a>
             </nav>
-            
+
             <div class="sidebar-footer">
                 <div class="api-status">
                     <span class="status-dot"></span>
                     <span id="apiStatus">Connecting...</span>
+                </div>
+                <div id="userMenu" class="user-menu" style="display: none;">
+                    <div class="user-info">
+                        <div class="user-avatar" id="userAvatar">U</div>
+                        <span class="user-email" id="userEmail">user@example.com</span>
+                    </div>
+                    <button class="logout-btn" onclick="handleLogout()">🚪 Logout</button>
                 </div>
             </div>
         </aside>
@@ -108,7 +117,8 @@
                         <div id="contentsForm" class="form-section">
                             <div class="form-group">
                                 <label>URLs (one per line)</label>
-                                <textarea id="contentsUrls" rows="3" placeholder="https://example.com&#10;https://another-site.com"></textarea>
+                                <textarea id="contentsUrls" rows="3"
+                                    placeholder="https://example.com&#10;https://another-site.com"></textarea>
                             </div>
                             <div class="form-group">
                                 <label>
@@ -121,7 +131,8 @@
                         <div id="answerForm" class="form-section">
                             <div class="form-group">
                                 <label>Question</label>
-                                <input type="text" id="answerQuery" placeholder="e.g., What is transformer architecture?">
+                                <input type="text" id="answerQuery"
+                                    placeholder="e.g., What is transformer architecture?">
                             </div>
                             <div class="form-group">
                                 <label>Number of Sources</label>
@@ -137,7 +148,8 @@
                             </div>
                             <div class="form-group">
                                 <label>Additional Instructions (optional)</label>
-                                <textarea id="researchInstructions" rows="2" placeholder="Focus on recent developments..."></textarea>
+                                <textarea id="researchInstructions" rows="2"
+                                    placeholder="Focus on recent developments..."></textarea>
                             </div>
                             <div class="form-row">
                                 <div class="form-group">
@@ -352,4 +364,5 @@ answer = gexa.answer("What is machine learning?")</code></pre>
 
     <script src="app.js"></script>
 </body>
+
 </html>

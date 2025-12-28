@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GEXA - Login</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+</head>
+
+<body class="auth-page">
+    <div class="auth-container">
+        <div class="auth-card">
+            <div class="auth-header">
+                <span class="auth-logo">🔍</span>
+                <h1>GEXA</h1>
+                <p>Web Search API for AI Agents</p>
+            </div>
+
+            <!-- Login Form -->
+            <div id="loginForm" class="auth-form active">
+                <h2>Welcome Back</h2>
+                <form onsubmit="handleLogin(event)">
+                    <div class="form-group">
+                        <label for="loginEmail">Email</label>
+                        <input type="email" id="loginEmail" placeholder="you@example.com" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="loginPassword">Password</label>
+                        <input type="password" id="loginPassword" placeholder="••••••••" required>
+                    </div>
+                    <button type="submit" class="auth-btn" id="loginBtn">
+                        <span class="btn-text">Sign In</span>
+                        <span class="btn-loader" style="display: none;">⏳</span>
+                    </button>
+                </form>
+                <p class="auth-switch">
+                    Don't have an account? <a href="#" onclick="showSignup()">Sign up</a>
+                </p>
+            </div>
+
+            <!-- Signup Form -->
+            <div id="signupForm" class="auth-form">
+                <h2>Create Account</h2>
+                <form onsubmit="handleSignup(event)">
+                    <div class="form-group">
+                        <label for="signupEmail">Email</label>
+                        <input type="email" id="signupEmail" placeholder="you@example.com" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="signupPassword">Password</label>
+                        <input type="password" id="signupPassword" placeholder="Min. 6 characters" minlength="6"
+                            required>
+                    </div>
+                    <div class="form-group">
+                        <label for="confirmPassword">Confirm Password</label>
+                        <input type="password" id="confirmPassword" placeholder="••••••••" required>
+                    </div>
+                    <button type="submit" class="auth-btn" id="signupBtn">
+                        <span class="btn-text">Create Account</span>
+                        <span class="btn-loader" style="display: none;">⏳</span>
+                    </button>
+                </form>
+                <p class="auth-switch">
+                    Already have an account? <a href="#" onclick="showLogin()">Sign in</a>
+                </p>
+            </div>
+
+            <!-- Error/Success Messages -->
+            <div id="authMessage" class="auth-message"></div>
+
+            <!-- API Key Display (shown after signup) -->
+            <div id="apiKeyDisplay" class="api-key-display" style="display: none;">
+                <h3>🔑 Your API Key</h3>
+                <p>Save this key - it won't be shown again!</p>
+                <div class="key-box">
+                    <input type="text" id="newApiKey" readonly>
+                    <button onclick="copyApiKey()" class="copy-btn">📋 Copy</button>
+                </div>
+                <p id="copyStatus" class="copy-status"></p>
+                <button onclick="goToDashboard()" class="auth-btn secondary">
+                    Go to Dashboard →
+                </button>
+            </div>
+        </div>
+
+        <div class="auth-footer">
+            <p>Powered by GEXA | <a href="/docs" target="_blank">API Docs</a></p>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = 'http://localhost:8000';
+
+        function showLogin() {
+            document.getElementById('loginForm').classList.add('active');
+            document.getElementById('signupForm').classList.remove('active');
+            document.getElementById('apiKeyDisplay').style.display = 'none';
+            clearMessage();
+        }
+
+        function showSignup() {
+            document.getElementById('loginForm').classList.remove('active');
+            document.getElementById('signupForm').classList.add('active');
+            document.getElementById('apiKeyDisplay').style.display = 'none';
+            clearMessage();
+        }
+
+        function showMessage(message, isError = false) {
+            const msgEl = document.getElementById('authMessage');
+            msgEl.textContent = message;
+            msgEl.className = 'auth-message ' + (isError ? 'error' : 'success');
+            msgEl.style.display = 'block';
+        }
+
+        function clearMessage() {
+            const msgEl = document.getElementById('authMessage');
+            msgEl.style.display = 'none';
+        }
+
+        function setLoading(btnId, loading) {
+            const btn = document.getElementById(btnId);
+            btn.disabled = loading;
+            btn.querySelector('.btn-text').style.display = loading ? 'none' : 'inline';
+            btn.querySelector('.btn-loader').style.display = loading ? 'inline' : 'none';
+        }
+
+        async function handleLogin(event) {
+            event.preventDefault();
+            clearMessage();
+
+            const email = document.getElementById('loginEmail').value;
+            const password = document.getElementById('loginPassword').value;
+
+            setLoading('loginBtn', true);
+
+            try {
+                const response = await fetch(`${API_BASE}/auth/login`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email, password })
+                });
+
+                const data = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(data.detail || 'Login failed');
+                }
+
+                // Store tokens
+                localStorage.setItem('gexa_access_token', data.access_token);
+                localStorage.setItem('gexa_refresh_token', data.refresh_token);
+                localStorage.setItem('gexa_user_email', data.email);
+                localStorage.setItem('gexa_user_id', data.user_id);
+
+                showMessage('Login successful! Redirecting...');
+                setTimeout(() => {
+                    window.location.href = '/dashboard/';
+                }, 1000);
+
+            } catch (error) {
+                showMessage(error.message, true);
+            } finally {
+                setLoading('loginBtn', false);
+            }
+        }
+
+        async function handleSignup(event) {
+            event.preventDefault();
+            clearMessage();
+
+            const email = document.getElementById('signupEmail').value;
+            const password = document.getElementById('signupPassword').value;
+            const confirmPassword = document.getElementById('confirmPassword').value;
+
+            if (password !== confirmPassword) {
+                showMessage('Passwords do not match', true);
+                return;
+            }
+
+            setLoading('signupBtn', true);
+
+            try {
+                const response = await fetch(`${API_BASE}/auth/signup`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email, password })
+                });
+
+                const data = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(data.detail || 'Signup failed');
+                }
+
+                // Store tokens
+                if (data.access_token) {
+                    localStorage.setItem('gexa_access_token', data.access_token);
+                    localStorage.setItem('gexa_refresh_token', data.refresh_token);
+                    localStorage.setItem('gexa_user_email', data.email);
+                    localStorage.setItem('gexa_user_id', data.user_id);
+                }
+
+                // Store the API key for use in dashboard
+                if (data.api_key) {
+                    localStorage.setItem('gexa_api_key', data.api_key);
+                    document.getElementById('newApiKey').value = data.api_key;
+
+                    // Show API key display
+                    document.getElementById('signupForm').classList.remove('active');
+                    document.getElementById('apiKeyDisplay').style.display = 'block';
+                    showMessage('Account created successfully!');
+                } else {
+                    showMessage('Account created! Please check your email to verify.');
+                }
+
+            } catch (error) {
+                showMessage(error.message, true);
+            } finally {
+                setLoading('signupBtn', false);
+            }
+        }
+
+        async function copyApiKey() {
+            const key = document.getElementById('newApiKey').value;
+            try {
+                await navigator.clipboard.writeText(key);
+                document.getElementById('copyStatus').textContent = '✅ Copied!';
+            } catch (err) {
+                document.getElementById('newApiKey').select();
+                document.execCommand('copy');
+                document.getElementById('copyStatus').textContent = '✅ Copied!';
+            }
+        }
+
+        function goToDashboard() {
+            window.location.href = '/dashboard/';
+        }
+
+        // Check if already logged in
+        document.addEventListener('DOMContentLoaded', () => {
+            const token = localStorage.getItem('gexa_access_token');
+            if (token) {
+                window.location.href = '/dashboard/';
+            }
+        });
+    </script>
+</body>
+
+</html>

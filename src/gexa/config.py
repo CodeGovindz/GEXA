@@ -56,6 +56,20 @@ class Settings(BaseSettings):
         description="Salt for API key hashing",
     )
 
+    # Supabase Settings
+    supabase_url: Optional[str] = Field(
+        default=None,
+        description="Supabase project URL",
+    )
+    supabase_anon_key: Optional[str] = Field(
+        default=None,
+        description="Supabase anonymous/public key",
+    )
+    supabase_service_role_key: Optional[str] = Field(
+        default=None,
+        description="Supabase service role key (secret)",
+    )
+
     # Crawler Settings
     crawler_max_concurrent: int = Field(
         default=5,
