@@ -9,7 +9,7 @@ on:
 env:
   AZURE_CONTAINER_APP_NAME: gexa-api
   AZURE_RESOURCE_GROUP: gexa-rg
-  IMAGE_NAME: ghcr.io/${{ github.repository_owner }}/gexa
+  IMAGE_NAME: ghcr.io/codegovindz/gexa
 
 jobs:
   build-and-deploy:
