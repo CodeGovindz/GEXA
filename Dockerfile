@@ -1,31 +1,14 @@
 # GEXA - Web Search API for AI Agents
-# Multi-stage Docker build for Azure Container Apps
+# Single-stage Docker build for Azure Container Apps
 
-# Stage 1: Build stage
-FROM python:3.11-slim as builder
-
-WORKDIR /app
-
-# Install build dependencies
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    build-essential \
-    && rm -rf /var/lib/apt/lists/*
-
-# Copy project files
-COPY pyproject.toml README.md ./
-COPY src/ ./src/
-COPY dashboard/ ./dashboard/
-
-# Install Python dependencies
-RUN pip install --no-cache-dir -e ".[dev]"
-
-# Stage 2: Runtime stage
 FROM python:3.11-slim
 
 WORKDIR /app
 
-# Install Playwright dependencies and runtime libraries
+# Install system dependencies for Playwright/Chromium
 RUN apt-get update && apt-get install -y --no-install-recommends \
+    # Build dependencies
+    build-essential \
     # Playwright/Chromium dependencies
     libnss3 \
     libnspr4 \
@@ -50,12 +33,15 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     fonts-liberation \
     && rm -rf /var/lib/apt/lists/*
 
-# Copy installed packages from builder
-COPY --from=builder /usr/local/lib/python3.11/site-packages /usr/local/lib/python3.11/site-packages
-COPY --from=builder /usr/local/bin /usr/local/bin
+# Copy project files
+COPY pyproject.toml README.md ./
+COPY src/ ./src/
+COPY dashboard/ ./dashboard/
+COPY alembic/ ./alembic/
+COPY alembic.ini ./
 
-# Copy application code
-COPY --from=builder /app /app
+# Install Python dependencies
+RUN pip install --no-cache-dir -e ".[dev]"
 
 # Install Playwright browsers
 RUN playwright install chromium
@@ -64,11 +50,11 @@ RUN playwright install chromium
 ENV PYTHONPATH=/app/src
 ENV PYTHONUNBUFFERED=1
 
-# Expose port (Azure will override with $PORT)
+# Expose port
 EXPOSE 8000
 
 # Health check
-HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
+HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
     CMD wget --no-verbose --tries=1 --spider http://localhost:8000/health || exit 1
 
 # Start command
