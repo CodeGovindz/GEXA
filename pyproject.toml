@@ -43,6 +43,9 @@ dependencies = [
     
     # Authentication
     "supabase>=2.0.0",
+    "gotrue>=2.0.0",
+    "postgrest>=0.14.0",
+    "storage3>=0.7.0",
 ]
 
 [project.optional-dependencies]
