@@ -20,10 +20,10 @@ async def search(
     api_key: ApiKey = Depends(get_api_key),
     db: AsyncSession = Depends(get_async_db),
 ):
-    """Perform semantic web search.
+    """Perform real-time web search.
     
-    Search across indexed web pages using semantic similarity.
-    Returns ranked results with optional content and highlights.
+    Searches the live internet using DuckDuckGo and returns
+    ranked results with optional full content and highlights.
     """
     try:
         service = SearchService(db)
@@ -49,6 +49,7 @@ async def search(
                 score=r["score"],
                 published_date=r.get("published_date"),
                 author=r.get("author"),
+                snippet=r.get("snippet"),
                 content=r.get("content"),
                 highlights=r.get("highlights"),
             )

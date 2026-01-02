@@ -47,6 +47,9 @@ dependencies = [
     "gotrue>=2.0.0",
     "postgrest>=0.14.0",
     "storage3>=0.7.0",
+    
+    # Web Search
+    "duckduckgo-search>=7.0.0",
 ]
 
 [project.optional-dependencies]

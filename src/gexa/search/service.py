@@ -16,6 +16,7 @@ from gexa.database.models import WebPage, PageChunk, SearchQuery, ApiKey
 from gexa.crawler import CrawlerEngine, ContentExtractor
 from gexa.search.embeddings import EmbeddingService
 from gexa.search.vector_store import VectorStore
+from gexa.search.web_search import WebSearchService
 
 
 class SearchService:
@@ -26,6 +27,7 @@ class SearchService:
         self.embedding_service = EmbeddingService()
         self.vector_store = VectorStore(db)
         self.extractor = ContentExtractor()
+        self.web_search = WebSearchService()
     
     async def search(
         self,
@@ -35,66 +37,108 @@ class SearchService:
         include_highlights: bool = False,
         filters: Optional[Dict[str, Any]] = None,
         api_key: Optional[ApiKey] = None,
+        use_web_search: bool = True,
     ) -> Dict[str, Any]:
-        """Perform semantic search across indexed pages.
+        """Perform real-time web search and return enriched results.
+        
+        This method searches the live internet using DuckDuckGo, optionally
+        crawls the results for full content, and returns enriched results.
         
         Args:
             query: Search query
             num_results: Number of results to return
-            include_content: Include full page content
+            include_content: Include full page content (will crawl URLs)
             include_highlights: Include relevant highlights
             filters: Optional search filters
             api_key: API key for logging
+            use_web_search: If True, search the live web. If False, use indexed pages only.
             
         Returns:
             Search response with results
         """
         start_time = time.time()
-        
-        # Generate query embedding
-        query_embedding = await self.embedding_service.embed_query(query)
-        
-        # Convert filter schema to dict if needed
-        filter_dict = None
-        if filters:
-            filter_dict = {
-                "domains": filters.domains if hasattr(filters, 'domains') else filters.get("domains"),
-                "exclude_domains": filters.exclude_domains if hasattr(filters, 'exclude_domains') else filters.get("exclude_domains"),
-                "start_date": filters.start_date if hasattr(filters, 'start_date') else filters.get("start_date"),
-                "end_date": filters.end_date if hasattr(filters, 'end_date') else filters.get("end_date"),
-                "language": filters.language if hasattr(filters, 'language') else filters.get("language"),
-            }
-            # Remove None values
-            filter_dict = {k: v for k, v in filter_dict.items() if v is not None}
-        
-        # Search vector store
-        raw_results = await self.vector_store.search(
-            query_embedding=query_embedding,
-            limit=num_results,
-            filters=filter_dict,
-        )
-        
-        # Format results
         results = []
-        for r in raw_results:
-            result = {
-                "id": r["page_id"],
-                "url": r["url"],
-                "title": r["title"],
-                "score": r["score"],
-                "published_date": r["published_date"],
-                "author": r["author"],
-            }
+        
+        if use_web_search:
+            # Perform real-time web search using DuckDuckGo
+            web_results = await self.web_search.search(
+                query=query,
+                num_results=num_results,
+            )
             
-            if include_content:
-                result["content"] = r["content"]
+            # Process web search results
+            for i, r in enumerate(web_results):
+                result = {
+                    "id": str(i + 1),  # Simple ID for web results
+                    "url": r.url,
+                    "title": r.title,
+                    "score": 1.0 - (i * 0.05),  # Decreasing score by position
+                    "published_date": None,
+                    "author": None,
+                    "snippet": r.snippet,
+                }
+                
+                # If content is requested, crawl the URL
+                if include_content and r.url:
+                    try:
+                        async with CrawlerEngine() as crawler:
+                            crawl_result = await crawler.crawl_url(r.url)
+                            if not crawl_result.error and crawl_result.content:
+                                result["content"] = crawl_result.content.content
+                                result["title"] = crawl_result.content.title or r.title
+                                result["author"] = crawl_result.content.author
+                                result["published_date"] = crawl_result.content.published_date
+                                
+                                # Generate highlights if requested
+                                if include_highlights and result.get("content"):
+                                    result["highlights"] = self.extractor.get_highlights(
+                                        result["content"], query
+                                    )
+                    except Exception as e:
+                        # If crawling fails, just use the snippet as content
+                        result["content"] = r.snippet
+                
+                results.append(result)
+        else:
+            # Fall back to indexed search (original behavior)
+            query_embedding = await self.embedding_service.embed_query(query)
             
-            if include_highlights and r.get("content"):
-                result["highlights"] = self.extractor.get_highlights(
-                    r["content"], query
-                )
+            filter_dict = None
+            if filters:
+                filter_dict = {
+                    "domains": filters.domains if hasattr(filters, 'domains') else filters.get("domains"),
+                    "exclude_domains": filters.exclude_domains if hasattr(filters, 'exclude_domains') else filters.get("exclude_domains"),
+                    "start_date": filters.start_date if hasattr(filters, 'start_date') else filters.get("start_date"),
+                    "end_date": filters.end_date if hasattr(filters, 'end_date') else filters.get("end_date"),
+                    "language": filters.language if hasattr(filters, 'language') else filters.get("language"),
+                }
+                filter_dict = {k: v for k, v in filter_dict.items() if v is not None}
             
-            results.append(result)
+            raw_results = await self.vector_store.search(
+                query_embedding=query_embedding,
+                limit=num_results,
+                filters=filter_dict,
+            )
+            
+            for r in raw_results:
+                result = {
+                    "id": r["page_id"],
+                    "url": r["url"],
+                    "title": r["title"],
+                    "score": r["score"],
+                    "published_date": r["published_date"],
+                    "author": r["author"],
+                }
+                
+                if include_content:
+                    result["content"] = r["content"]
+                
+                if include_highlights and r.get("content"):
+                    result["highlights"] = self.extractor.get_highlights(
+                        r["content"], query
+                    )
+                
+                results.append(result)
         
         elapsed_ms = int((time.time() - start_time) * 1000)
         
@@ -104,7 +148,7 @@ class SearchService:
                 api_key_id=api_key.id,
                 query=query,
                 num_results=num_results,
-                filters=str(filter_dict) if filter_dict else None,
+                filters=str(filters) if filters else None,
                 results_count=len(results),
                 latency_ms=elapsed_ms,
             )

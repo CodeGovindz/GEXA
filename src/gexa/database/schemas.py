@@ -60,6 +60,7 @@ class SearchResult(BaseModel):
     author: Optional[str] = Field(default=None, description="Author name")
     
     # Optional fields based on request
+    snippet: Optional[str] = Field(default=None, description="Short snippet from search")
     content: Optional[str] = Field(default=None, description="Full page content")
     highlights: Optional[List[str]] = Field(default=None, description="Relevant highlights")
 
