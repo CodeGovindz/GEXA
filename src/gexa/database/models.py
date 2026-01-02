@@ -53,8 +53,12 @@ class ApiKey(Base):
     last_used_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
 
     # Relationships
-    search_queries: Mapped[List["SearchQuery"]] = relationship(back_populates="api_key")
-    crawl_jobs: Mapped[List["CrawlJob"]] = relationship(back_populates="api_key")
+    search_queries: Mapped[List["SearchQuery"]] = relationship(
+        back_populates="api_key", cascade="all, delete-orphan"
+    )
+    crawl_jobs: Mapped[List["CrawlJob"]] = relationship(
+        back_populates="api_key", cascade="all, delete-orphan"
+    )
 
 
 class WebPage(Base):
@@ -138,7 +142,7 @@ class CrawlJob(Base):
         UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
     )
     api_key_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("api_keys.id"), nullable=False
+        UUID(as_uuid=True), ForeignKey("api_keys.id", ondelete="CASCADE"), nullable=False
     )
     
     # Job details
@@ -174,7 +178,7 @@ class SearchQuery(Base):
         UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
     )
     api_key_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("api_keys.id"), nullable=False
+        UUID(as_uuid=True), ForeignKey("api_keys.id", ondelete="CASCADE"), nullable=False
     )
     
     # Query details
