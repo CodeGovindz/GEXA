@@ -337,7 +337,17 @@ async function loadApiKeys() {
     keysList.innerHTML = '<p class="loading-text">Loading keys...</p>';
 
     try {
-        const response = await fetch(`${API_BASE}/keys`);
+        const response = await fetch(`${API_BASE}/keys`, {
+            headers: {
+                'Authorization': `Bearer ${accessToken}`
+            }
+        });
+
+        if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.detail || 'Failed to load keys');
+        }
+
         const keys = await response.json();
 
         if (keys.length === 0) {
@@ -387,7 +397,10 @@ async function createApiKey() {
     try {
         const response = await fetch(`${API_BASE}/keys`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${accessToken}`
+            },
             body: JSON.stringify({ name, quota_total: quota }),
         });
 
@@ -413,7 +426,12 @@ async function deleteKey(keyId) {
     }
 
     try {
-        const response = await fetch(`${API_BASE}/keys/${keyId}`, { method: 'DELETE' });
+        const response = await fetch(`${API_BASE}/keys/${keyId}`, {
+            method: 'DELETE',
+            headers: {
+                'Authorization': `Bearer ${accessToken}`
+            }
+        });
         if (!response.ok) {
             throw new Error('Failed to delete key');
         }
