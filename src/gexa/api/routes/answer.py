@@ -40,13 +40,25 @@ async def answer_question(
         # Step 1: Rewrite the user's question into an optimized search query
         # This prevents ambiguity (e.g., "capital" as city vs. money)
         rewrite_model = genai.GenerativeModel("gemini-2.0-flash-exp")
-        rewrite_prompt = f"""Convert this question into an optimal web search query.
-The search query should be concise, specific, and target the exact information needed.
-Remove filler words and focus on key entities and concepts.
+        rewrite_prompt = f"""You are a search query optimizer. Convert the user's question into an optimal web search query.
+
+CRITICAL DISAMBIGUATION RULES:
+1. "capital" in geographic context → use "capital city" (e.g., "capital of France" → "Paris capital city France")
+2. "capital" in financial context → keep as "capital" or use "capital investment/money"
+3. Add the ACTUAL ANSWER if known (e.g., "capital of Japan" → "Tokyo capital city Japan population")
+4. Replace pronouns with specific entities
+5. Remove question words (what, how, why, when)
+6. Add terms that clarify intent (geography, economy, history, etc.)
+
+Examples:
+- "What is the capital of Japan?" → "Tokyo Japan capital city"
+- "What is the population of Tokyo?" → "Tokyo population 2024 demographics"
+- "Who is the CEO of Apple?" → "Tim Cook Apple CEO"
+- "How much capital does a startup need?" → "startup capital investment funding amount"
 
 Question: {request.query}
 
-Search query (output ONLY the search query, nothing else):"""
+Search query (output ONLY the optimized search query, nothing else):"""
         
         try:
             rewrite_response = rewrite_model.generate_content(rewrite_prompt)
@@ -88,7 +100,6 @@ Search query (output ONLY the search query, nothing else):"""
                     ))
         
         # Generate answer using Gemini
-        genai.configure(api_key=settings.gemini_api_key)
         model = genai.GenerativeModel(settings.llm_model)
         
         context = "\n\n".join(context_parts)
