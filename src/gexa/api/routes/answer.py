@@ -34,11 +34,35 @@ async def answer_question(
     start_time = time.time()
     
     try:
-        # First, search for relevant content
+        # Configure Gemini for query rewriting
+        genai.configure(api_key=settings.gemini_api_key)
+        
+        # Step 1: Rewrite the user's question into an optimized search query
+        # This prevents ambiguity (e.g., "capital" as city vs. money)
+        rewrite_model = genai.GenerativeModel("gemini-2.0-flash-exp")
+        rewrite_prompt = f"""Convert this question into an optimal web search query.
+The search query should be concise, specific, and target the exact information needed.
+Remove filler words and focus on key entities and concepts.
+
+Question: {request.query}
+
+Search query (output ONLY the search query, nothing else):"""
+        
+        try:
+            rewrite_response = rewrite_model.generate_content(rewrite_prompt)
+            optimized_query = rewrite_response.text.strip().strip('"').strip("'")
+            # Fallback to original if rewriting fails or returns empty
+            if not optimized_query or len(optimized_query) < 3:
+                optimized_query = request.query
+        except Exception:
+            # If rewriting fails, use original query
+            optimized_query = request.query
+        
+        # Step 2: Search with the optimized query
         service = SearchService(db)
         
         search_result = await service.search(
-            query=request.query,
+            query=optimized_query,
             num_results=request.num_sources,
             include_content=True,
             include_highlights=True,
