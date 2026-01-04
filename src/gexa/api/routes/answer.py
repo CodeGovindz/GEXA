@@ -34,12 +34,13 @@ async def answer_question(
     start_time = time.time()
     
     try:
-        # Configure Gemini for query rewriting
+        # Configure Gemini
         genai.configure(api_key=settings.gemini_api_key)
+        model = genai.GenerativeModel(settings.llm_model)
+        rewrite_model = genai.GenerativeModel("gemini-2.0-flash-exp")
         
         # Step 1: Rewrite the user's question into an optimized search query
         # This prevents ambiguity (e.g., "capital" as city vs. money)
-        rewrite_model = genai.GenerativeModel("gemini-2.0-flash-exp")
         rewrite_prompt = f"""You are a search query optimizer. Convert the user's question into an optimal web search query.
 
 CRITICAL DISAMBIGUATION RULES:
@@ -63,11 +64,9 @@ Search query (output ONLY the optimized search query, nothing else):"""
         try:
             rewrite_response = rewrite_model.generate_content(rewrite_prompt)
             optimized_query = rewrite_response.text.strip().strip('"').strip("'")
-            # Fallback to original if rewriting fails or returns empty
             if not optimized_query or len(optimized_query) < 3:
                 optimized_query = request.query
         except Exception:
-            # If rewriting fails, use original query
             optimized_query = request.query
         
         # Step 2: Search with the optimized query
@@ -80,17 +79,15 @@ Search query (output ONLY the optimized search query, nothing else):"""
             include_highlights=True,
         )
         
-        # Prepare context from search results
+        # Step 3: Prepare context from search results
         context_parts = []
         citations = []
         
         for i, result in enumerate(search_result["results"]):
             if result.get("content"):
-                # Truncate content to avoid token limits
                 content = result["content"][:3000]
                 context_parts.append(f"[Source {i+1}]: {result.get('title', 'Unknown')}\n{content}")
                 
-                # Create citation
                 if request.include_citations:
                     snippet = result.get("highlights", [content[:200]])[0] if result.get("highlights") else content[:200]
                     citations.append(Citation(
@@ -99,21 +96,22 @@ Search query (output ONLY the optimized search query, nothing else):"""
                         snippet=snippet,
                     ))
         
-        # Generate answer using Gemini
-        model = genai.GenerativeModel(settings.llm_model)
-        
         context = "\n\n".join(context_parts)
         
-        prompt = f"""Based on the following sources, answer this question: {request.query}
+        # Step 4: Generate answer using Gemini with HYBRID approach
+        # If sources don't have the answer, Gemini should use its own knowledge
+        prompt = f"""Answer this question: {request.query}
 
-Sources:
-{context}
+I have gathered the following web sources:
+{context if context else "No relevant sources were found."}
 
 Instructions:
-1. Provide a comprehensive, accurate answer based on the sources
-2. If the sources don't contain enough information, say so
-3. Use clear, well-structured language
-4. Reference specific sources when making claims (e.g., "According to Source 1...")
+1. First, try to answer using the sources above if they contain relevant information
+2. If the sources DON'T contain the answer or are irrelevant to the question, use your own knowledge to provide an accurate answer
+3. Be transparent: if you're using your own knowledge instead of sources, say "Based on my knowledge..." 
+4. If using sources, cite them (e.g., "According to Source 1...")
+5. Provide a comprehensive, well-structured answer
+6. For factual questions (capitals, populations, dates, etc.), prioritize accuracy over source citation
 
 Answer:"""
         
