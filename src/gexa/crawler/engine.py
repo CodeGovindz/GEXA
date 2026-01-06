@@ -22,6 +22,7 @@ class CrawlResult:
     url: str
     status_code: int
     content: Optional[ExtractedContent] = None
+    raw_html: Optional[str] = None  # Store raw HTML for formatters
     error: Optional[str] = None
     crawled_at: datetime = None
     
@@ -124,6 +125,7 @@ class CrawlerEngine:
                     url=url,
                     status_code=status_code,
                     content=content,
+                    raw_html=html,
                 )
                 
             except PlaywrightTimeout:

@@ -55,8 +55,8 @@ async def get_contents(
                     ))
                     continue
                 
-                # Get the raw HTML
-                raw_html = crawl_result.html if crawl_result.html else ""
+                # Get the raw HTML (stored by crawler for use with formatters)
+                raw_html = crawl_result.raw_html if crawl_result.raw_html else ""
                 
                 # Check if screenshot is requested
                 needs_screenshot = 'screenshot' in request.formats
