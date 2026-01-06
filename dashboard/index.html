@@ -75,6 +75,9 @@
                         <button class="endpoint-btn" data-endpoint="answer">
                             💬 Answer
                         </button>
+                        <button class="endpoint-btn" data-endpoint="map">
+                            🗺️ Map
+                        </button>
                         <button class="endpoint-btn" data-endpoint="research">
                             🔬 Research
                         </button>
@@ -121,8 +124,18 @@
                                     placeholder="https://example.com&#10;https://another-site.com"></textarea>
                             </div>
                             <div class="form-group">
+                                <label>Output Formats</label>
+                                <div class="checkbox-group">
+                                    <label><input type="checkbox" id="formatMarkdown" checked> Markdown</label>
+                                    <label><input type="checkbox" id="formatText" checked> Text</label>
+                                    <label><input type="checkbox" id="formatHtml"> HTML</label>
+                                    <label><input type="checkbox" id="formatScreenshot"> Screenshot</label>
+                                </div>
+                            </div>
+                            <div class="form-group">
                                 <label>
-                                    <input type="checkbox" id="contentsIncludeMarkdown" checked> Include Markdown
+                                    <input type="checkbox" id="contentsRemoveBoilerplate" checked> Remove Boilerplate
+                                    (nav, footer, ads)
                                 </label>
                             </div>
                         </div>
@@ -137,6 +150,29 @@
                             <div class="form-group">
                                 <label>Number of Sources</label>
                                 <input type="number" id="answerNumSources" value="5" min="1" max="20">
+                            </div>
+                            <div class="form-group">
+                                <label>JSON Schema (optional - for structured output)</label>
+                                <textarea id="answerJsonFormat" rows="2"
+                                    placeholder='{"name": "", "role": "", "company": ""}'></textarea>
+                                <small style="color: var(--text-secondary);">Leave empty for regular text answer</small>
+                            </div>
+                        </div>
+
+                        <!-- Map Form -->
+                        <div id="mapForm" class="form-section">
+                            <div class="form-group">
+                                <label>Domain URL</label>
+                                <input type="text" id="mapUrl" placeholder="https://example.com">
+                            </div>
+                            <div class="form-group">
+                                <label>Max URLs to discover</label>
+                                <input type="number" id="mapMaxUrls" value="100" min="1" max="1000">
+                            </div>
+                            <div class="checkbox-group">
+                                <label><input type="checkbox" id="mapUseSitemap" checked> Use Sitemap</label>
+                                <label><input type="checkbox" id="mapUseRobots" checked> Use Robots.txt</label>
+                                <label><input type="checkbox" id="mapShallowCrawl" checked> Shallow Crawl</label>
                             </div>
                         </div>
 

@@ -260,21 +260,55 @@ function buildRequest() {
         case 'contents':
             const urlsText = document.getElementById('contentsUrls').value;
             const urls = urlsText.split('\n').map(u => u.trim()).filter(u => u);
+
+            // Build formats array from checkboxes
+            const formats = [];
+            if (document.getElementById('formatMarkdown').checked) formats.push('markdown');
+            if (document.getElementById('formatText').checked) formats.push('text');
+            if (document.getElementById('formatHtml').checked) formats.push('html');
+            if (document.getElementById('formatScreenshot').checked) formats.push('screenshot');
+
             return {
                 endpoint: '/contents',
                 body: {
                     urls: urls,
-                    include_markdown: document.getElementById('contentsIncludeMarkdown').checked,
+                    formats: formats.length > 0 ? formats : ['markdown', 'text'],
+                    remove_boilerplate: document.getElementById('contentsRemoveBoilerplate').checked,
                 },
             };
 
         case 'answer':
+            const jsonFormatText = document.getElementById('answerJsonFormat').value.trim();
+            let jsonFormat = null;
+
+            // Parse JSON format if provided
+            if (jsonFormatText) {
+                try {
+                    jsonFormat = JSON.parse(jsonFormatText);
+                } catch (e) {
+                    throw new Error('Invalid JSON schema format');
+                }
+            }
+
             return {
                 endpoint: '/answer',
                 body: {
                     query: document.getElementById('answerQuery').value,
                     num_sources: parseInt(document.getElementById('answerNumSources').value),
                     include_citations: true,
+                    json_format: jsonFormat,
+                },
+            };
+
+        case 'map':
+            return {
+                endpoint: '/map',
+                body: {
+                    url: document.getElementById('mapUrl').value,
+                    max_urls: parseInt(document.getElementById('mapMaxUrls').value),
+                    use_sitemap: document.getElementById('mapUseSitemap').checked,
+                    use_robots: document.getElementById('mapUseRobots').checked,
+                    shallow_crawl: document.getElementById('mapShallowCrawl').checked,
                 },
             };
 
