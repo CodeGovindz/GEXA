@@ -1,9 +1,11 @@
 """
 Answer API endpoint using Gemini for AI-generated answers.
+Supports structured JSON output similar to Olostep.
 """
 
+import json
 import time
-from typing import List
+from typing import List, Dict, Any
 
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -19,6 +21,37 @@ from gexa.search import SearchService
 router = APIRouter()
 
 
+def generate_json_schema_prompt(json_format: Dict[str, Any]) -> str:
+    """Generate a prompt that instructs Gemini to output in the given JSON schema."""
+    schema_str = json.dumps(json_format, indent=2)
+    return f"""
+You MUST respond with a valid JSON object that matches this exact schema:
+{schema_str}
+
+Fill in the values based on the information gathered. If a value is unknown, use null.
+Output ONLY the JSON object, no additional text or markdown formatting.
+"""
+
+
+def parse_json_response(text: str) -> Dict[str, Any]:
+    """Parse JSON from Gemini response, handling common formatting issues."""
+    # Remove markdown code blocks if present
+    text = text.strip()
+    if text.startswith("```json"):
+        text = text[7:]
+    if text.startswith("```"):
+        text = text[3:]
+    if text.endswith("```"):
+        text = text[:-3]
+    text = text.strip()
+    
+    try:
+        return json.loads(text)
+    except json.JSONDecodeError:
+        # Return as error dict if parsing fails
+        return {"error": "Failed to parse JSON response", "raw_response": text}
+
+
 @router.post("", response_model=AnswerResponse)
 async def answer_question(
     request: AnswerRequest,
@@ -30,6 +63,11 @@ async def answer_question(
     Searches the web for relevant information and generates
     a comprehensive answer using Gemini, with citations to
     the source pages.
+    
+    Features:
+    - Query rewriting for disambiguation
+    - Hybrid approach (web search + LLM knowledge)
+    - Structured JSON output (json_format parameter)
     """
     start_time = time.time()
     
@@ -40,7 +78,6 @@ async def answer_question(
         rewrite_model = genai.GenerativeModel("gemini-2.0-flash-exp")
         
         # Step 1: Rewrite the user's question into an optimized search query
-        # This prevents ambiguity (e.g., "capital" as city vs. money)
         rewrite_prompt = f"""You are a search query optimizer. Convert the user's question into an optimal web search query.
 
 CRITICAL DISAMBIGUATION RULES:
@@ -98,9 +135,33 @@ Search query (output ONLY the optimized search query, nothing else):"""
         
         context = "\n\n".join(context_parts)
         
-        # Step 4: Generate answer using Gemini with HYBRID approach
-        # If sources don't have the answer, Gemini should use its own knowledge
-        prompt = f"""Answer this question: {request.query}
+        # Step 4: Generate answer - handle both plain text and structured JSON
+        structured_answer = None
+        
+        if request.json_format:
+            # Structured JSON output mode (like Olostep)
+            json_schema_instruction = generate_json_schema_prompt(request.json_format)
+            
+            prompt = f"""Answer this question: {request.query}
+
+I have gathered the following web sources:
+{context if context else "No relevant sources were found."}
+
+Instructions:
+1. Extract the requested information from the sources or use your knowledge if sources are insufficient
+2. For factual questions, prioritize accuracy
+{json_schema_instruction}"""
+            
+            response = model.generate_content(prompt)
+            answer_text = response.text
+            structured_answer = parse_json_response(answer_text)
+            
+            # Also generate a human-readable answer
+            answer_text = f"Structured response generated. See structured_answer field for JSON data."
+            
+        else:
+            # Regular text answer with hybrid approach
+            prompt = f"""Answer this question: {request.query}
 
 I have gathered the following web sources:
 {context if context else "No relevant sources were found."}
@@ -114,9 +175,9 @@ Instructions:
 6. For factual questions (capitals, populations, dates, etc.), prioritize accuracy over source citation
 
 Answer:"""
-        
-        response = model.generate_content(prompt)
-        answer_text = response.text
+            
+            response = model.generate_content(prompt)
+            answer_text = response.text
         
         # Increment quota (search + answer generation)
         await increment_quota(api_key, db, amount=2)
@@ -126,6 +187,7 @@ Answer:"""
         return AnswerResponse(
             query=request.query,
             answer=answer_text,
+            structured_answer=structured_answer,
             citations=citations if request.include_citations else [],
             took_ms=elapsed_ms,
         )

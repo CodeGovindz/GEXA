@@ -85,14 +85,22 @@ class ContentsRequest(BaseModel):
         max_length=10, 
         description="URLs to fetch content from"
     )
-    include_markdown: bool = Field(
-        default=True, description="Include markdown version"
+    formats: List[str] = Field(
+        default=["markdown", "text"],
+        description="Output formats: html, markdown, text, screenshot"
+    )
+    remove_boilerplate: bool = Field(
+        default=True,
+        description="Remove nav, footer, ads using readability algorithm"
     )
     include_summary: bool = Field(
         default=False, description="Include AI-generated summary"
     )
     summary_max_length: Optional[int] = Field(
         default=200, description="Maximum summary length in words"
+    )
+    screenshot_full_page: bool = Field(
+        default=True, description="Capture full page or viewport only"
     )
 
 
@@ -102,7 +110,9 @@ class PageContent(BaseModel):
     url: str = Field(..., description="Page URL")
     title: Optional[str] = Field(default=None, description="Page title")
     content: Optional[str] = Field(default=None, description="Plain text content")
+    html: Optional[str] = Field(default=None, description="Cleaned HTML content")
     markdown: Optional[str] = Field(default=None, description="Markdown content")
+    screenshot: Optional[str] = Field(default=None, description="Screenshot as base64 data URL")
     summary: Optional[str] = Field(default=None, description="AI-generated summary")
     author: Optional[str] = Field(default=None, description="Author")
     published_date: Optional[datetime] = Field(default=None, description="Publication date")
@@ -153,6 +163,42 @@ class CrawlStatusResponse(BaseModel):
     error_message: Optional[str] = Field(default=None)
 
 
+# ============= Map Schemas =============
+
+class MapRequest(BaseModel):
+    """Request schema for /map endpoint - URL discovery."""
+    
+    url: str = Field(..., description="Domain URL to map")
+    include_subdomains: bool = Field(
+        default=False, description="Include URLs from subdomains"
+    )
+    max_urls: int = Field(
+        default=100, ge=1, le=1000, description="Maximum URLs to discover"
+    )
+    use_sitemap: bool = Field(
+        default=True, description="Parse sitemap.xml for URLs"
+    )
+    use_robots: bool = Field(
+        default=True, description="Parse robots.txt for paths"
+    )
+    shallow_crawl: bool = Field(
+        default=True, description="Perform shallow link discovery"
+    )
+
+
+class MapResponse(BaseModel):
+    """Response schema for /map endpoint."""
+    
+    url: str = Field(..., description="Domain that was mapped")
+    urls: List[str] = Field(..., description="Discovered URLs")
+    total_urls: int = Field(..., description="Total URLs found")
+    sources: Dict[str, int] = Field(
+        default={}, 
+        description="URL count by source (sitemap, robots, crawl)"
+    )
+    took_ms: int = Field(..., description="Discovery time in milliseconds")
+
+
 # ============= Find Similar Schemas =============
 
 class FindSimilarRequest(BaseModel):
@@ -190,6 +236,10 @@ class AnswerRequest(BaseModel):
     include_citations: bool = Field(
         default=True, description="Include source citations"
     )
+    json_format: Optional[Dict[str, Any]] = Field(
+        default=None,
+        description="Schema for structured JSON output. Example: {'name': '', 'role': ''}"
+    )
 
 
 class Citation(BaseModel):
@@ -205,6 +255,9 @@ class AnswerResponse(BaseModel):
     
     query: str = Field(..., description="Original question")
     answer: str = Field(..., description="Generated answer")
+    structured_answer: Optional[Dict[str, Any]] = Field(
+        default=None, description="Structured JSON response if json_format was provided"
+    )
     citations: List[Citation] = Field(default=[], description="Source citations")
     took_ms: int = Field(..., description="Total time in milliseconds")
 
